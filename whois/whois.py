@@ -2,6 +2,7 @@ import urllib3
 import csv
 import os
 import json
+import arin
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # TODO: Add in reverse lookup
@@ -23,9 +24,6 @@ def checkIPcountry(ip_addr):
     http = urllib3.PoolManager()
     page = http.request('GET', 'https://geoip-db.com/jsonp/' + ip_addr).data.decode().strip("callback").strip('(').strip(')')
     return json.loads(page)
-
-def printPage(page):
-
 
 def main():
     csvfile = open('countries_by_rir.csv', 'r')
@@ -53,6 +51,7 @@ def main():
 
                 if registry == "ARIN":
                     page = http.request('GET', 'http://whois.arin.net/rest/ip/' + ip_addr + '.txt')
+
                     status = page.status
                     data = page.data.decode().split("\n")
                     if status == 200:
@@ -64,7 +63,6 @@ def main():
                     moreinformation = True
                     parent = str([s for s in data if "Parent" in s]).split()[2].replace("'", "").replace("]","").strip("(").strip(")")
                     organization = str([s for s in data if "Organization" in s]).split()[3].replace("'", "").replace("]","").strip("(").strip(")")
-                    print(parent)
 
                     while moreinformation:
 
@@ -94,6 +92,8 @@ def main():
                                         continue
                                     else:
                                         print(line)
+                elif register == "AFRINIC":
+                    print("test")
 
 
 
