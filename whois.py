@@ -1,10 +1,35 @@
 import urllib3
+import csv
+import os
+import json
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # TODO: Add in reverse lookup
 
+csvfile = open('countries_by_rir.csv', 'r')
+readcsv = csv.reader(csvfile, delimiter=',')
+rir = {'AFRINIC': [],
+        'APNIC': [],
+        'ARIN': [],
+        'RIPE NCC': [],
+        'LACNIC': []
+        }
+for row in readcsv:
+    key = row[3]
+    if key in rir:
+        rir[key].append(row[0].lower())
+
+def checkIPcountry(ip_addr):
+    http = urllib3.PoolManager()
+    page = http.request('GET', 'https://geoip-db.com/jsonp/' + ip_addr).data.decode().strip("callback").strip('(').strip(')')
+    return json.loads(page)
+
+def printPage(page):
+
 
 def main():
+    csvfile = open('countries_by_rir.csv', 'r')
+    readcsv = csv.reader(csvfile, delimiter=',')
     http = urllib3.PoolManager()
     running = True
     while running:
@@ -20,48 +45,57 @@ def main():
             if ip_addr == "quit":
                 running = False
             else:
-                page = http.request('GET', 'http://whois.arin.net/rest/ip/' + ip_addr + '.txt')
-                status = page.status
-                data = page.data.decode().split("\n")
-                if status == 200:
-                    for line in data:
-                        if line == '' or '#' in line:
-                            continue
-                        else:
-                            print(line)
-                moreinformation = True
-                parent = str([s for s in data if "Parent" in s]).split()[2].replace("'", "").replace("]","").strip("(").strip(")")
-                organization = str([s for s in data if "Organization" in s]).split()[3].replace("'", "").replace("]","").strip("(").strip(")")
-                print(parent)
+                country = checkIPcountry(ip_addr)
+                country = country['country_name']
+                for key,value in rir.items():
+                    if country.lower() in value:
+                        registry = key
 
-                while moreinformation:
+                if registry == "ARIN":
+                    page = http.request('GET', 'http://whois.arin.net/rest/ip/' + ip_addr + '.txt')
+                    status = page.status
+                    data = page.data.decode().split("\n")
+                    if status == 200:
+                        for line in data:
+                            if line == '' or '#' in line:
+                                continue
+                            else:
+                                print(line)
+                    moreinformation = True
+                    parent = str([s for s in data if "Parent" in s]).split()[2].replace("'", "").replace("]","").strip("(").strip(")")
+                    organization = str([s for s in data if "Organization" in s]).split()[3].replace("'", "").replace("]","").strip("(").strip(")")
+                    print(parent)
 
-                    print("\nWould you like to find more information?")
-                    print("1) Parent Information")
-                    print("2) Organization Information")
-                    selection = input("Selection> ")
-                    if selection == "quit":
-                        moreinformation = False
-                        running = False
-                    elif selection == "1":
-                        print()
-                        page = http.request('GET', 'https://whois.arin.net/rest/net/' + parent + '.txt')
-                        status = page.status
-                        if status == 200:
-                            for line in page.data.decode().split("\n"):
-                                if line == '' or '#' in line:
-                                    continue
-                                else:
-                                    print(line)
-                    elif selection == "2":
-                        page = http.request('GET', 'https://whois.arin.net/rest/org/' + organization + '.txt')
-                        status = page.status
-                        if status == 200:
-                            for line in page.data.decode().split("\n"):
-                                if line == '' or '#' in line:
-                                    continue
-                                else:
-                                    print(line)
+                    while moreinformation:
+
+                        print("\nWould you like to find more information?")
+                        print("1) Parent Information")
+                        print("2) Organization Information")
+                        selection = input("Selection> ")
+                        if selection == "quit":
+                            moreinformation = False
+                            running = False
+                        elif selection == "1":
+                            print()
+                            page = http.request('GET', 'https://whois.arin.net/rest/net/' + parent + '.txt')
+                            status = page.status
+                            if status == 200:
+                                for line in page.data.decode().split("\n"):
+                                    if line == '' or '#' in line:
+                                        continue
+                                    else:
+                                        print(line)
+                        elif selection == "2":
+                            page = http.request('GET', 'https://whois.arin.net/rest/org/' + organization + '.txt')
+                            status = page.status
+                            if status == 200:
+                                for line in page.data.decode().split("\n"):
+                                    if line == '' or '#' in line:
+                                        continue
+                                    else:
+                                        print(line)
+
+
 
 
 
